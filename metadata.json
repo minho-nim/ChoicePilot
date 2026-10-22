@@ -1,0 +1,6 @@
+{
+  "name": "ChoicePilot",
+  "description": "사용자가 자신의 고민과 감정, 미확인 정보를 정리하고 스스로 판단하도록 돕는 로컬 고민 정리 도구",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
