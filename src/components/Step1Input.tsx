@@ -49,6 +49,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
     onChange({
       ...inputs,
       options: [...inputs.options, newOptionText.trim()],
+      optionNotes: [...inputs.options.map((_, index) => inputs.optionNotes?.[index] || ''), ''],
     });
     setNewOptionText('');
     setValidationError(null);
@@ -57,7 +58,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
   // Remove an option
   const handleRemoveOption = (index: number) => {
     const updated = inputs.options.filter((_, i) => i !== index);
-    onChange({ ...inputs, options: updated });
+    onChange({ ...inputs, options: updated, optionNotes: inputs.options.map((_, i) => inputs.optionNotes?.[i] || '').filter((_, i) => i !== index) });
   };
 
   // Edit an option
@@ -120,6 +121,10 @@ export const Step1Input: React.FC<Step1InputProps> = ({
     }
 
     setValidationError(null);
+    if (includeOptionComparison && inputs.options.filter((option) => option.trim()).length < 2) {
+      setValidationError('조건을 비교하려면 선택지를 두 개 이상 적어주세요. 고민 정리만 원하면 비교 선택을 해제할 수 있어요.');
+      return;
+    }
     onNext();
   };
 
@@ -129,18 +134,16 @@ export const Step1Input: React.FC<Step1InputProps> = ({
       <section className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xs">
         <div className="max-w-3xl space-y-3">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            고민을 정리하고 스스로 판단할 근거를 찾아보세요
+            지금 어떤 고민이 있나요?
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
-            상황과 마음을 먼저 살펴보고, 필요한 경우 선택지 비교를 덧붙여 판단 근거를 차분히 정리합니다.
+            정리되지 않은 이야기여도 괜찮아요. 한 번 적어 주시면 필요한 내용만 하나씩 확인할게요.
           </p>
 
           {/* Preset Buttons for Quick Try */}
-          <div className="pt-2">
-            <span className="block text-xs font-semibold text-slate-500 mb-2">
-              예시 시나리오 불러오기:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <details className="pt-2">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-500">예시로 살펴보기</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-3">
               {PRESET_SCENARIOS.map((preset) => (
                 <button
                   key={preset.id}
@@ -157,7 +160,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
                 </button>
               ))}
             </div>
-          </div>
+          </details>
         </div>
       </section>
 
@@ -174,8 +177,8 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         {/* Section 1: 고민 내용 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <span>1. 어떤 고민을 하고 계신가요?</span>
+            <label htmlFor="dilemma" className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <span>나의 고민</span>
               <span className="text-rose-500">*</span>
             </label>
             <span className="text-xs text-slate-500">
@@ -183,30 +186,17 @@ export const Step1Input: React.FC<Step1InputProps> = ({
             </span>
           </div>
           <textarea
-            rows={4}
+            id="dilemma"
+            rows={5}
             value={inputs.dilemma}
             onChange={(e) => onChange({ ...inputs, dilemma: e.target.value })}
-            placeholder="예: 5년 차 개발자로 현재 직장에 3년째 근무 중입니다. 안정적이지만 신규 기술 도입이 더뎌 성장이 정체된 느낌입니다. 최근 스타트업에서 팀 리드 자리와 연봉 인상 제안을 받았는데, 스타트업의 불확실성과 야근이 걱정됩니다."
+            placeholder="예: 새로운 일을 배우고 싶은데 퇴근하면 지쳐요. 무리해서 그만둘까 걱정되지만, 하루 20분이라도 시작하고 싶어요."
             className="w-full p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all text-sm leading-relaxed placeholder:text-slate-400 outline-none"
           />
         </div>
 
-        {/* Section 2: 달성 목표 */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-slate-900">
-              2. 이 결정을 통해 이루고자 하는 목표는 무엇인가요?
-            </label>
-            <span className="text-xs text-slate-500">성공 기준 (선택)</span>
-          </div>
-          <input
-            type="text"
-            value={inputs.goal}
-            onChange={(e) => onChange({ ...inputs, goal: e.target.value })}
-            placeholder="예: 3년 내 기술 리더로서의 실질적 역량을 키우고, 주 2회 이상 가족과 저녁을 먹을 수 있는 일상 유지"
-            className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-300 transition-all text-sm placeholder:text-slate-400 outline-none"
-          />
-        </div>
+        <details className="rounded-xl border border-slate-200 p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">마음·선택지·조건을 더 적고 싶어요 (선택)</summary>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3">
           <label className="space-y-1.5 text-xs font-semibold text-slate-800">
@@ -219,7 +209,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           </label>
           <label className="space-y-1.5 text-xs font-semibold text-slate-800">
             바라는 변화 (선택)
-            <textarea rows={2} value={inputs.desiredChange || ''} onChange={(e) => onChange({ ...inputs, desiredChange: e.target.value })} placeholder="예: 성장하면서도 일상의 여유를 유지하고 싶어요" className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-normal outline-none focus:bg-white" />
+            <textarea rows={2} value={inputs.desiredChange || inputs.goal} onChange={(e) => onChange({ ...inputs, desiredChange: e.target.value, goal: '' })} placeholder="예: 성장하면서도 일상의 여유를 유지하고 싶어요" className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-normal outline-none focus:bg-white" />
           </label>
         </div>
 
@@ -228,7 +218,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           <div className="flex items-center justify-between">
             <div>
               <label className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                <span>3. 검토 중인 대안 (선택지)</span>
+                <span>검토 중인 선택지</span>
                 <span className="text-slate-400">(선택)</span>
               </label>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -245,7 +235,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
             {inputs.options.map((opt, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200"
+                className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200"
               >
                 <span className="w-5 h-5 rounded bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold shrink-0">
                   {idx + 1}
@@ -255,6 +245,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
                   value={opt}
                   onChange={(e) => handleEditOption(idx, e.target.value)}
                   placeholder={`선택지 ${idx + 1} 내용 입력`}
+                  aria-label={`선택지 ${idx + 1}`}
                   className="flex-1 bg-transparent text-sm text-slate-800 outline-none"
                 />
                 <button
@@ -265,6 +256,14 @@ export const Step1Input: React.FC<Step1InputProps> = ({
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
+                <textarea
+                  rows={2}
+                  aria-label={`선택지 ${idx + 1}의 조건`}
+                  value={inputs.optionNotes?.[idx] || ''}
+                  onChange={(e) => onChange({ ...inputs, optionNotes: inputs.options.map((_, index) => index === idx ? e.target.value : inputs.optionNotes?.[index] || '') })}
+                  placeholder="이 선택지에 대해 알고 있는 조건이나 출처 (선택)"
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs outline-none focus:border-slate-400"
+                />
               </div>
             ))}
           </div>
@@ -302,7 +301,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
 
           <label className="flex items-start gap-2.5 p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-950 cursor-pointer">
             <input type="checkbox" checked={includeOptionComparison} onChange={(e) => onIncludeOptionComparisonChange(e.target.checked)} className="mt-0.5 accent-indigo-700" />
-            <span><strong>선택지 비교와 추천도 함께 받고 싶어요.</strong><br />선택지를 두 개 이상 입력한 경우에만 보조 비교를 제공합니다.</span>
+            <span><strong>선택지 조건 비교도 보고 싶어요.</strong><br />직접 적은 조건을 나란히 봅니다. 점수나 순위는 정하지 않습니다.</span>
           </label>
         </div>
 
@@ -310,13 +309,13 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         <div className="space-y-3 pt-3 border-t border-slate-100">
           <div>
             <label className="text-sm font-bold text-slate-900 flex items-center justify-between">
-              <span>4. 중요하게 고려할 판단 기준 (선택)</span>
+              <span>중요하게 고려할 판단 기준 (선택)</span>
               <span className="text-xs font-normal text-slate-500">
                 {inputs.criteria.length}개 설정됨
               </span>
             </label>
             <p className="text-xs text-slate-500 mt-0.5">
-              원하는 기준을 직접 추가해보세요. 기준이 없어도 기본 관점으로 분석할 수 있습니다.
+              중요하게 생각하는 조건이 있다면 적어주세요.
             </p>
           </div>
 
@@ -431,7 +430,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
             <div className="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-start gap-2 text-xs text-slate-500">
               <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
               <span>
-                등록된 판단 기준이 없습니다. 기준을 추가하면 분석이 더욱 정교해지며, 기준 없이도 분석을 계속 진행할 수 있습니다.
+                기준을 적지 않아도 고민을 정리할 수 있습니다.
               </span>
             </div>
           )}
@@ -441,7 +440,7 @@ export const Step1Input: React.FC<Step1InputProps> = ({
         <div className="space-y-2.5 pt-3 border-t border-slate-100">
           <div>
             <label className="text-sm font-bold text-slate-900">
-              5. 현실적인 제약조건 (선택)
+              현실적인 제약조건 (선택)
             </label>
             <p className="text-xs text-slate-500 mt-0.5">
               기한이나 예산 등 현실적인 한계를 적어주시면 무리 없는 계획을 제안합니다.
@@ -517,17 +516,19 @@ export const Step1Input: React.FC<Step1InputProps> = ({
           </div>
         </div>
 
+        </details>
+
         {/* Submit Button */}
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100">
           <span className="text-xs text-slate-500">
-            * 입력하신 내용은 브라우저 세션에서만 임시로 사용됩니다.
+            글은 외부 AI에 전송하지 않고 이 브라우저에서 정리합니다.
           </span>
           <button
             type="button"
             onClick={handleProceed}
             className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
           >
-            <span>다음: 목표 및 제약조건 확인</span>
+            <span>고민 정리 시작하기</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

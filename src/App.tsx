@@ -12,18 +12,19 @@ import { Step4ExecutionPlan } from './components/Step4ExecutionPlan';
 import {
   DecisionInputs,
   AnalysisResult,
-  UnderstandingResult,
   UserConfirmation,
   FollowUpQnA,
 } from './types';
 import { PresetScenario } from './data/presets';
 import { RotateCcw, AlertTriangle } from 'lucide-react';
-import { buildLocalAnalysis, buildLocalUnderstanding } from './utils/localAnalysis';
+import { buildLocalAnalysis } from './utils/localAnalysis';
+import { effectiveInputs } from './utils/reflectionContext';
 
 const INITIAL_INPUTS: DecisionInputs = {
   dilemma: '',
   goal: '',
   options: ['', ''],
+  optionNotes: ['', ''],
   criteria: [],
   constraints: {
     timeframe: '',
@@ -39,8 +40,6 @@ export default function App() {
   const [includeOptionComparison, setIncludeOptionComparison] = useState(false);
 
   // Empathetic understanding states
-  const [understanding, setUnderstanding] = useState<UnderstandingResult | null>(null);
-  const [isLoadingUnderstanding, setIsLoadingUnderstanding] = useState<boolean>(false);
   const [userConfirmation, setUserConfirmation] = useState<UserConfirmation | null>(null);
   const [followUpAnswers, setFollowUpAnswers] = useState<FollowUpQnA[]>([]);
 
@@ -51,9 +50,7 @@ export default function App() {
   const [showResetModal, setShowResetModal] = useState<boolean>(false);
 
   // Cache to avoid duplicate requests
-  const lastUnderstoodInputsRef = useRef<string | null>(null);
   const lastAnalyzedInputsRef = useRef<string | null>(null);
-  const understandingInFlightRef = useRef(false);
   const analysisInFlightRef = useRef(false);
 
   // Managed checklist state for Step 4
@@ -84,32 +81,38 @@ export default function App() {
   // Load preset scenario
   const handleLoadPreset = (preset: PresetScenario) => {
     setInputs(JSON.parse(JSON.stringify(preset.data)));
-    setUnderstanding(null);
     setUserConfirmation(null);
     setFollowUpAnswers([]);
     setResult(null);
     setCompletedTasks({});
     try { localStorage.removeItem('choicepilot_tasks_v3'); } catch { /* storage may be unavailable */ }
     setIncludeOptionComparison(false);
-    lastUnderstoodInputsRef.current = null;
     lastAnalyzedInputsRef.current = null;
     setAnalysisError(null);
+    setCurrentStep(1);
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
 
   // Build a transparent, local reflection without contacting an AI service.
   const handleGoToStep2 = async () => {
+    if (!inputs.dilemma.trim()) return;
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const currentInputsJson = JSON.stringify(inputs);
-    if (understanding && lastUnderstoodInputsRef.current === currentInputsJson) {
-      return;
-    }
-    const localUnderstanding = buildLocalUnderstanding(inputs);
-    setUnderstanding(localUnderstanding);
-    lastUnderstoodInputsRef.current = currentInputsJson;
     setAnalysisError(null);
+  };
+
+  const handleInputsChange = (next: DecisionInputs) => {
+    if (JSON.stringify(next) === JSON.stringify(inputs)) return;
+    const reflectionChanged = (['dilemma', 'goal', 'feelings', 'primaryConcern', 'desiredChange'] as const).some((key) => next[key] !== inputs[key]);
+    setInputs(next);
+    setResult(null);
+    setCompletedTasks({});
+    setAnalysisError(null);
+    lastAnalyzedInputsRef.current = null;
+    if (reflectionChanged) {
+      setFollowUpAnswers([]);
+      setUserConfirmation(null);
+    }
   };
 
   // Synthesize the user's own inputs locally; no API key or network request is used.
@@ -119,7 +122,10 @@ export default function App() {
   ) => {
     if (analysisInFlightRef.current) return;
     const analysisKey = JSON.stringify({ inputs, confirmation, followUps, includeOptionComparison });
-    if (result && lastAnalyzedInputsRef.current === analysisKey) return;
+    if (result && lastAnalyzedInputsRef.current === analysisKey) {
+      setCurrentStep(3);
+      return;
+    }
 
     setUserConfirmation(confirmation);
     setFollowUpAnswers(followUps);
@@ -127,16 +133,21 @@ export default function App() {
     setIsAnalyzing(true);
     analysisInFlightRef.current = true;
     setAnalysisError(null);
-    const clientStartTime = Date.now();
-    const localResult = buildLocalAnalysis(inputs, confirmation, followUps, includeOptionComparison, 0);
-    localResult.analysisDuration = Number(((Date.now() - clientStartTime) / 1000).toFixed(1));
-    setResult(localResult);
-    lastAnalyzedInputsRef.current = analysisKey;
-    setCompletedTasks({});
-    try { localStorage.removeItem('choicepilot_tasks_v3'); } catch { /* storage may be unavailable */ }
-    setCurrentStep(3);
-    setIsAnalyzing(false);
-    analysisInFlightRef.current = false;
+    const clientStartTime = performance.now();
+    try {
+      const localResult = buildLocalAnalysis(inputs, confirmation, followUps, includeOptionComparison, 0);
+      localResult.analysisDuration = (performance.now() - clientStartTime) / 1000;
+      setResult(localResult);
+      lastAnalyzedInputsRef.current = analysisKey;
+      setCompletedTasks({});
+      try { localStorage.removeItem('choicepilot_tasks_v3'); } catch { /* storage may be unavailable */ }
+      setCurrentStep(3);
+    } catch (error) {
+      setAnalysisError('고민을 정리하지 못했습니다. 입력을 확인하고 다시 시도해 주세요.');
+    } finally {
+      setIsAnalyzing(false);
+      analysisInFlightRef.current = false;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -146,7 +157,7 @@ export default function App() {
       inputs.dilemma.trim().length > 0 ||
       inputs.options.some((o) => o.trim().length > 0) ||
       inputs.criteria.length > 0 ||
-      Boolean(understanding) ||
+      followUpAnswers.length > 0 || Boolean(userConfirmation) ||
       Boolean(result);
 
     if (hasData) {
@@ -163,19 +174,15 @@ export default function App() {
     // 1. Reset all React state to pristine defaults
     setInputs(INITIAL_INPUTS);
     setIncludeOptionComparison(false);
-    setUnderstanding(null);
-    setIsLoadingUnderstanding(false);
     setUserConfirmation(null);
     setFollowUpAnswers([]);
     setResult(null);
     setAnalysisError(null);
     setIsAnalyzing(false);
-    understandingInFlightRef.current = false;
     analysisInFlightRef.current = false;
     setCompletedTasks({});
     setCurrentStep(1);
     lastAnalyzedInputsRef.current = null;
-    lastUnderstoodInputsRef.current = null;
 
     // 2. Clear app-specific decision keys from localStorage only
     try {
@@ -203,7 +210,7 @@ export default function App() {
       <Header
         currentStep={currentStep}
         onStepClick={(step) => {
-          if (step === 2 && !understanding) {
+          if (step === 2) {
             handleGoToStep2();
           } else {
             setCurrentStep(step);
@@ -212,6 +219,7 @@ export default function App() {
         }}
         onReset={handleRequestReset}
         canNavigateToStep3={Boolean(result)}
+        canNavigateToStep2={Boolean(inputs.dilemma.trim())}
         canNavigateToStep4={Boolean(result)}
       />
 
@@ -219,10 +227,15 @@ export default function App() {
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-5 sm:pt-7">
         {currentStep === 1 && (
           <Step1Input
-            inputs={inputs}
-            onChange={setInputs}
+            inputs={effectiveInputs(inputs, followUpAnswers, userConfirmation || undefined)}
+            onChange={handleInputsChange}
             includeOptionComparison={includeOptionComparison}
-            onIncludeOptionComparisonChange={setIncludeOptionComparison}
+            onIncludeOptionComparisonChange={(value) => {
+              setIncludeOptionComparison(value);
+              setResult(null);
+              setCompletedTasks({});
+              lastAnalyzedInputsRef.current = null;
+            }}
             onNext={handleGoToStep2}
             onLoadPreset={handleLoadPreset}
           />
@@ -238,9 +251,10 @@ export default function App() {
             onStartAnalysis={handleStartAnalysis}
             isAnalyzing={isAnalyzing}
             error={analysisError}
-            understanding={understanding}
-            isLoadingUnderstanding={isLoadingUnderstanding}
-            onRetryUnderstanding={handleGoToStep2}
+            followUps={followUpAnswers}
+            onFollowUpsChange={(answers) => { setFollowUpAnswers(answers); setResult(null); }}
+            confirmation={userConfirmation}
+            onConfirmationChange={(value) => { setUserConfirmation(value); setResult(null); }}
           />
         )}
 
@@ -275,7 +289,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="mt-auto py-6 border-t border-slate-200 text-center text-xs text-slate-500">
-        <p>ChoicePilot • 질문자의 감정과 고민을 이해하고 스스로 판단하도록 돕는 자기결정 코칭</p>
+        <p>ChoicePilot · 내 말로 고민을 정리하고, 스스로 판단할 근거를 찾습니다</p>
       </footer>
 
       {/* Complete Reset Modal */}

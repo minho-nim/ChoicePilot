@@ -69,16 +69,16 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
               >
                 <Clock className="w-3 h-3" />
                 <span>
-                  소요 시간: {analysisDuration}초 {analysisDuration <= 30 ? '(30초 이내 달성)' : '(지연)'}
+                  로컬 정리 처리: {analysisDuration < 0.01 ? '0.01초 미만' : `${analysisDuration.toFixed(2)}초`}
                 </span>
               </span>
             )}
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            스스로 판단을 돕는 고민 종합 정리
+            지금의 고민을 한눈에
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-            입력하신 감정과 확인된 사실을 구분하고, 미확인 내용은 열린 상태로 두어 스스로 판단하도록 돕습니다.
+            작성한 내용을 바탕으로 정리했습니다. 이 정리가 최종 결정을 뜻하지는 않습니다.
           </p>
         </div>
 
@@ -87,11 +87,38 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
           onClick={onNext}
           className="self-start sm:self-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors shrink-0 shadow-xs"
         >
-          <span>7일 실행 계획 보기</span>
+          <span>원하면 7일 계획 보기</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>
 
+      {result.limitations?.filter((item) => item.includes('확정하지')).map((item) => <p key={item} className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">{item}</p>)}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-500">지금의 핵심 고민</h3>
+          <p className="text-sm leading-relaxed text-slate-900 whitespace-pre-wrap">{problemAnalysis.coreDilemma}</p>
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-500">중요하게 생각하는 것</h3>
+          <p className="text-sm leading-relaxed text-slate-900">바라는 변화: {emotionAnalysis.desiredChange}</p>
+          {appliedCriteria.length > 0 && <ul className="space-y-1 text-sm text-slate-700">{appliedCriteria.map((item) => <li key={item.name}>· {item.name} ({item.importance})</li>)}</ul>}
+          {emotionAnalysis.primaryConcerns !== '아직 확인되지 않음' && <p className="text-xs leading-relaxed text-slate-500">부담스러운 점: {emotionAnalysis.primaryConcerns}</p>}
+        </section>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 space-y-2 shadow-xs">
+          <h3 className="text-xs font-semibold text-slate-500">아직 모르는 것</h3>
+          {factDistinction.unverifiedItems.length ? <ul className="space-y-1 text-sm text-slate-800">{factDistinction.unverifiedItems.map((item) => <li key={item}>· {item}</li>)}</ul> : <p className="text-sm leading-relaxed text-slate-700">정리에 필요한 핵심 항목은 적혀 있습니다. 설명한 내용의 실제 조건은 별도로 확인할 수 있습니다.</p>}
+        </section>
+        <section className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-5 space-y-2">
+          <h3 className="text-xs font-semibold text-indigo-700">지금 할 수 있는 작은 행동 하나</h3>
+          <p className="text-sm leading-relaxed text-slate-900">{sevenDayPlan[0]?.task}</p>
+          <p className="text-xs text-slate-600">완료 기준: {sevenDayPlan[0]?.completionCriteria}</p>
+        </section>
+      </div>
+
+      <details className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700">상세 정리 펼쳐보기</summary>
+        <div className="mt-4 space-y-4">
+        {result.limitations?.map((item) => <p key={item} className="text-xs text-slate-500 leading-relaxed">{item}</p>)}
       {/* 1. 현재 상황과 핵심 고민 요약 */}
       <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
@@ -245,7 +272,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
       </section>
 
       {/* 3. 선택을 어렵게 만드는 핵심 갈등 (Section 5 요구사항) */}
-      {coreConflict && (
+      {coreConflict && coreConflict.conflictDescription !== '아직 확인되지 않음' && (
         <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -310,7 +337,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
               사용자가 직접 입력한 내용
             </span>
             <ul className="space-y-1 text-slate-700">
-              {factDistinction?.verifiedFacts?.map((fact, idx) => (
+              {factDistinction?.userReported?.map((fact, idx) => (
                 <li key={idx} className="leading-relaxed flex items-start gap-1">
                   <span className="text-slate-400 font-bold">•</span>
                   <span>{fact}</span>
@@ -323,7 +350,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
           <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-1.5">
             <span className="font-bold text-emerald-950 block text-[11px] flex items-center gap-1">
               <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
-              확인·수정한 사실
+              사용자가 확인·수정한 정리
             </span>
             <ul className="space-y-1 text-emerald-900">
               {factDistinction?.userConfirmedFacts?.length ? factDistinction.userConfirmedFacts.map((fact, idx) => (
@@ -338,10 +365,10 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
           {/* 분석에서 사용한 해석과 전제 */}
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
             <span className="font-bold text-slate-800 block text-[11px]">
-              AI 추론 (사용하지 않음)
+              정리 방식
             </span>
             <ul className="space-y-1 text-slate-700">
-              {factDistinction?.aiInferences?.map((item, idx) => (
+              {(factDistinction?.aiInferences?.length ? factDistinction.aiInferences : ['사용자의 표현을 로컬 규칙으로 정리했습니다. 외부 사실을 검증하거나 심리 상태를 진단하지 않습니다.']).map((item, idx) => (
                 <li key={idx} className="leading-relaxed flex items-start gap-1">
                   <span className="text-slate-400 font-bold">•</span>
                   <span>{item}</span>
@@ -415,6 +442,8 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
         </section>
       )}
 
+        </div>
+      </details>
       {/* 6. 선택지 비교 (사용자가 요청한 경우만 제공) */}
       {showOptionComparison && optionsComparison.length > 0 && (
       <section className="space-y-4">
@@ -424,7 +453,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
               6
             </span>
             <h3 className="text-sm font-bold text-slate-900">
-              선택지 비교 및 보조 분석 (보조 기능)
+              요청한 선택지 조건 비교
             </h3>
           </div>
           <button
@@ -442,7 +471,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
         </div>
 
         <p className="text-xs text-slate-500">
-          * 선택지 비교와 추천은 최종 결정을 대신 내려주는 것이 아니라, 본인 스스로 합리적 판단을 내릴 수 있도록 돕는 보조적 참고 정보입니다.
+          직접 적은 조건을 나란히 볼 수 있습니다. 장단점이나 추천 순위는 임의로 만들지 않습니다.
         </p>
 
         {showOptionsDetails && (
@@ -478,7 +507,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
                   </div>
 
                   {/* Pros & Cons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {(opt.pros.length > 0 || opt.cons.length > 0) && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
                       <span className="font-bold text-slate-800 flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -506,14 +535,14 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
                         ))}
                       </ul>
                     </div>
-                  </div>
+                  </div>}
 
                   {/* Main Risk */}
                   {opt.mainRisk && (
                     <div className="p-3 rounded-xl bg-rose-50/50 border border-rose-100 text-xs text-rose-950 leading-relaxed">
                       <span className="font-bold text-rose-900 block text-[11px] mb-0.5 flex items-center gap-1">
                         <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                        주요 위험:
+                        추가로 확인할 점:
                       </span>
                       {opt.mainRisk}
                     </div>
@@ -523,13 +552,13 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
                   <div className="pt-2 border-t border-slate-100 space-y-1 text-xs text-slate-700 leading-relaxed">
                     <p>
                       <strong className="text-slate-900 font-semibold mr-1">
-                        유리한 조건:
+                        바라는 변화:
                       </strong>
                       {opt.suitableCondition}
                     </p>
                     <p>
                       <strong className="text-slate-900 font-semibold mr-1">
-                        신중해야 할 조건:
+                        부담스러운 점:
                       </strong>
                       {opt.cautionCondition}
                     </p>
@@ -543,13 +572,13 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
               <div className="bg-slate-900 text-white rounded-2xl p-6 sm:p-7 shadow-xs space-y-3">
                 <div>
                   <span className="text-xs font-semibold text-slate-400 block mb-1">
-                    잠정적 추천 방향 (보조적 제안)
+                    판단에 참고하기
                   </span>
                   <h4 className="text-base sm:text-lg font-bold text-white leading-snug">
                     {finalRecommendation.summary}
                   </h4>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mt-2">
-                    <strong>추천 이유:</strong> {finalRecommendation.reason}
+                    {finalRecommendation.reason}
                   </p>
                 </div>
 
@@ -567,7 +596,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
                   <div className="p-3.5 rounded-xl bg-slate-800/90 border border-slate-700 space-y-1">
                     <span className="text-amber-300 font-bold block text-[11px] flex items-center gap-1">
                       <Info className="w-3.5 h-3.5" />
-                      추천이 바뀔 수 있는 핵심 조건:
+                      다시 살펴볼 때:
                     </span>
                     <p className="text-slate-200 leading-relaxed">
                       {finalRecommendation.conditionsForChange}
@@ -580,65 +609,6 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
         )}
       </section>
       )}
-
-      {/* 7. 판단 근거 확보를 위한 7일 실행 계획 */}
-      <section className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-[11px] font-bold flex items-center justify-center">
-              7
-            </span>
-            <Calendar className="w-4 h-4 text-slate-700" />
-            <span>판단 근거 확보를 위한 7일 실행 계획 (Day 1 ~ Day 7)</span>
-          </h3>
-          <span className="text-xs text-slate-500">
-            감정 억누르기가 아닌, 정보 확인과 작은 실천을 통한 결정 근거 마련
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {sevenDayPlan.slice(0, 4).map((d) => (
-            <div
-              key={d.day}
-              className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900">Day {d.day}</span>
-                <span className="text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                  {d.estimatedMinutes}
-                </span>
-              </div>
-              <p className="font-semibold text-slate-800 text-[11px] leading-snug">
-                {d.task}
-              </p>
-              <p className="text-[10px] text-slate-500 leading-snug">
-                완료 기준: {d.completionCriteria}
-              </p>
-            </div>
-          ))}
-          {sevenDayPlan.length > 4 && (
-            <div className="p-3.5 rounded-xl bg-slate-900 text-white flex flex-col justify-between space-y-2 sm:col-span-2 lg:col-span-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-xs text-slate-200">
-                  전체 7일 체크리스트 및 이미지 저장
-                </span>
-                <span className="text-xs text-slate-400">Day 1 ~ Day 7 완비</span>
-              </div>
-              <p className="text-xs text-slate-300">
-                인터랙티브 체크리스트와 이미지/텍스트 복사 기능을 통해 7일 계획을 즉시 실행하고 기록할 수 있습니다.
-              </p>
-              <button
-                type="button"
-                onClick={onNext}
-                className="self-start px-4 py-2 bg-white text-slate-900 rounded-lg text-xs font-bold hover:bg-slate-100 flex items-center gap-1.5 transition-colors"
-              >
-                <span>7일 전체 계획 및 체크리스트 열기</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Bottom Navigation Buttons */}
       <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200">
@@ -656,7 +626,7 @@ export const Step3Comparison: React.FC<Step3ComparisonProps> = ({
           onClick={onNext}
           className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
         >
-          <span>앞으로 7일 동안 해볼 일 확인하기</span>
+          <span>7일 계획과 체크리스트 보기 (선택)</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

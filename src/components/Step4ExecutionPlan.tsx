@@ -56,6 +56,7 @@ export const Step4ExecutionPlan: React.FC<Step4ExecutionPlanProps> = ({
 ${hasRequestedComparison ? `■ 선택지 비교 참고: ${finalRecommendation.summary}\n■ 근거: ${finalRecommendation.reason}` : '■ 이번 결과는 선택지 추천 없이 판단 근거를 정리합니다.'}
 
 ■ 7일 실행 계획
+${result.planNote || ''}
 ${sevenDayPlan
   .map(
     (d) => `[Day ${d.day}] ${d.dayTitle} (예상: ${d.estimatedMinutes})
@@ -95,8 +96,9 @@ ${sevenDayPlan
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      document.execCommand('copy');
+      const didCopy = document.execCommand('copy');
       document.body.removeChild(textArea);
+      if (!didCopy) throw new Error('복사 권한이 제한되어 있습니다. 새 탭에서 다시 시도해 주세요.');
       setCopiedText(true);
       setFeedback({ type: 'success', message: '계획 텍스트가 클립보드에 복사되었습니다.' });
       setTimeout(() => {
@@ -173,7 +175,7 @@ ${sevenDayPlan
             앞으로 7일 동안 해볼 일
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-            하루에 10~20분 내로 실천할 수 있는 핵심 행동 1개씩만 간결하게 구성했습니다.
+            {result.planNote || '하루에 핵심 행동 하나씩 해 볼 수 있는 초안입니다.'}
           </p>
         </div>
 
@@ -302,6 +304,9 @@ ${sevenDayPlan
                   <button
                     type="button"
                     onClick={() => onToggleTask(dayPlan.day)}
+                    role="checkbox"
+                    aria-checked={checked}
+                    aria-label={`${dayPlan.day}일차 완료`}
                     className="mt-0.5 shrink-0 text-slate-400 hover:text-slate-900 transition-colors"
                     title={checked ? '완료 취소' : '과제 완료'}
                   >
@@ -370,7 +375,7 @@ ${sevenDayPlan
           className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>선택지 비교 화면으로</span>
+          <span>고민 정리 화면으로</span>
         </button>
 
         <button

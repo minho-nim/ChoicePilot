@@ -6,9 +6,9 @@ import {defineConfig} from 'vite';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, isPreview }) => {
   return {
-    base: command === 'build' ? '/ChoicePilot/' : '/',
+    base: command === 'build' || isPreview ? '/ChoicePilot/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

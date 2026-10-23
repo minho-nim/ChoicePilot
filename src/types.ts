@@ -11,6 +11,7 @@ export interface DecisionInputs {
   primaryConcern?: string;
   desiredChange?: string;
   options: string[];
+  optionNotes?: string[];
   criteria: DecisionCriterion[];
   constraints: {
     timeframe: string;
@@ -30,9 +31,15 @@ export interface UnderstandingResult {
   needsFollowUp: boolean; // 추가 확인 질문 필요 여부
   followUpQuestion?: string; // 핵심 후속 질문 1개
   followUpReason?: string; // 질문 이유
+  followUpField?: ReflectionField;
+  emotionalEvidence?: string;
 }
 
+export type ReflectionField = 'primaryConcern' | 'desiredChange' | 'feelings';
+
 export interface FollowUpQnA {
+  field?: ReflectionField;
+  skipped?: boolean;
   question: string;
   answer: string;
 }
@@ -40,6 +47,7 @@ export interface FollowUpQnA {
 export interface UserConfirmation {
   status: 'mostly_correct' | 'partially_different' | 'unsure';
   userCorrection?: string;
+  correctedInputs?: Partial<Pick<DecisionInputs, 'dilemma' | 'goal' | 'feelings' | 'primaryConcern' | 'desiredChange'>>;
 }
 
 export interface CriteriaFitItem {
@@ -85,7 +93,8 @@ export interface EmotionAnalysisModule {
 }
 
 export interface FactDistinction {
-  verifiedFacts: string[]; // 사용자가 직접 말한 사실
+  verifiedFacts: string[]; // 외부 자료로 검증된 사실. 로컬 정리에서는 비워 둠
+  userReported?: string[]; // 사용자가 설명한 내용. 독립적으로 검증한 사실이 아님
   userConfirmedFacts: string[]; // 사용자 확인/수정을 거친 내용
   aiInferences: string[]; // AI의 해석 및 분석용 전제
   unverifiedItems: string[]; // 아직 확인되지 않은 정보
@@ -123,6 +132,8 @@ export interface AnalysisResult {
   };
   sevenDayPlan: DayPlan[];
   analysisDuration?: number; // 소요 시간 (초)
+  limitations?: string[];
+  planNote?: string;
   factualVsAssumptions?: {
     verifiedFacts: string[];
     assumptions: string[];

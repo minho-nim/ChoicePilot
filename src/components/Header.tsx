@@ -6,6 +6,7 @@ interface HeaderProps {
   onStepClick: (step: number) => void;
   onReset: () => void;
   canNavigateToStep3: boolean;
+  canNavigateToStep2: boolean;
   canNavigateToStep4: boolean;
 }
 
@@ -14,12 +15,13 @@ export const Header: React.FC<HeaderProps> = ({
   onStepClick,
   onReset,
   canNavigateToStep3,
+  canNavigateToStep2,
   canNavigateToStep4,
 }) => {
   const steps = [
     { number: 1, label: '고민 나누기' },
-    { number: 2, label: '감정·고민 이해' },
-    { number: 3, label: '종합 정리·판단' },
+    { number: 2, label: '질문·확인' },
+    { number: 3, label: '고민 한눈에' },
     { number: 4, label: '7일 실행계획' },
   ];
 
@@ -38,11 +40,11 @@ export const Header: React.FC<HeaderProps> = ({
                   ChoicePilot
                 </span>
                 <span className="px-1.5 py-0.5 text-[11px] font-medium bg-indigo-50 text-indigo-700 rounded border border-indigo-100">
-                  자기결정 코칭
+                  고민 정리
                 </span>
               </div>
               <p className="text-xs text-slate-500 hidden sm:block">
-                질문자의 감정과 핵심 고민을 이해하고, 스스로 판단할 수 있도록 돕습니다
+                마음과 고민을 정리하고, 다음 판단에 필요한 근거를 찾습니다
               </p>
             </div>
           </div>
@@ -54,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
               const isPassed = currentStep > s.number;
               const isClickable =
                 s.number === 1 ||
-                s.number === 2 ||
+                (s.number === 2 && canNavigateToStep2) ||
                 (s.number === 3 && canNavigateToStep3) ||
                 (s.number === 4 && canNavigateToStep4);
 
